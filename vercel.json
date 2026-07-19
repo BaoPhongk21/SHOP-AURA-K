@@ -1,0 +1,46 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm run install:all",
+  "buildCommand": "npm run build:client",
+  "outputDirectory": "client/dist",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30,
+      "includeFiles": [
+        "server/**"
+      ],
+      "excludeFiles": [
+        "server/tests/**",
+        "server/logs/**",
+        "server/**/*.log",
+        "server/.env*"
+      ]
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/uploads/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/static-assets/(.*)",
+      "destination": "/images/$1"
+    },
+    {
+      "source": "/client-images/(.*)",
+      "destination": "/images/$1"
+    },
+    {
+      "source": "/img/(.*)",
+      "destination": "/images/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

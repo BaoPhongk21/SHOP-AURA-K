@@ -1,0 +1,10 @@
+# Dependency folders
+node_modules/
+
+# Environment variables
+.env
+
+# Uploads (chỉ giữ thư mục, không giữ file ảnh)
+src/uploads/products/*
+src/uploads/avatars/*
+!src/uploads/.gitkeep

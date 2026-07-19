@@ -1,0 +1,44 @@
+# Dependency directories
+node_modules/
+**/node_modules/
+
+# Env files (IMPORTANT: Do not push secrets to Git)
+.env
+.env.*
+!.env.example
+!**/.env.example
+.vercel/
+**/.vercel/
+
+# Uploaded files (Images, videos)
+server/src/uploads/*
+!server/src/uploads/.gitkeep
+
+# Build directories
+client/dist/
+dist/
+coverage/
+
+# Logs and runtime output
+logs/
+**/logs/
+*.log
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Credentials and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+credentials*.json
+
+# Editor metadata
+.vscode/
+.idea/
+*.swp
+*.swo

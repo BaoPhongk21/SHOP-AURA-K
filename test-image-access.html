@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Image Access</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+        }
+        img {
+            max-width: 300px;
+            border: 2px solid #333;
+            margin: 10px;
+        }
+        .url-display {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Test Image Access from Backend</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Logo from Database</h2>
+        <div class="url-display">http://localhost:5000/uploads/settings/logo-1780208520119.jpg</div>
+        <img 
+            src="http://localhost:5000/uploads/settings/logo-1780208520119.jpg" 
+            alt="Logo Test"
+            onload="document.getElementById('logo-status').className='status success'; document.getElementById('logo-status').textContent='✅ Logo loaded successfully';"
+            onerror="document.getElementById('logo-status').className='status error'; document.getElementById('logo-status').textContent='❌ Logo failed to load';"
+        />
+        <div id="logo-status" class="status">Loading...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Banner from Database</h2>
+        <div class="url-display">http://localhost:5000/uploads/settings/banner-1780208280815.jpg</div>
+        <img 
+            src="http://localhost:5000/uploads/settings/banner-1780208280815.jpg" 
+            alt="Banner Test"
+            onload="document.getElementById('banner-status').className='status success'; document.getElementById('banner-status').textContent='✅ Banner loaded successfully';"
+            onerror="document.getElementById('banner-status').className='status error'; document.getElementById('banner-status').textContent='❌ Banner failed to load';"
+        />
+        <div id="banner-status" class="status">Loading...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Fetch API Test</h2>
+        <button onclick="testFetch()">Test Fetch API</button>
+        <div id="fetch-result" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Settings API</h2>
+        <button onclick="testSettingsAPI()">Test Settings API</button>
+        <div id="settings-result" style="margin-top: 10px;"></div>
+    </div>
+
+    <script>
+        async function testFetch() {
+            const resultDiv = document.getElementById('fetch-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch('http://localhost:5000/uploads/settings/logo-1780208520119.jpg');
+                if (response.ok) {
+                    resultDiv.innerHTML = '<div class="status success">✅ Fetch successful! Status: ' + response.status + '</div>';
+                } else {
+                    resultDiv.innerHTML = '<div class="status error">❌ Fetch failed! Status: ' + response.status + '</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<div class="status error">❌ Fetch error: ' + error.message + '</div>';
+            }
+        }
+
+        async function testSettingsAPI() {
+            const resultDiv = document.getElementById('settings-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/v1/settings');
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="status success">✅ Settings API successful!</div>
+                        <div class="url-display">Logo URL: ${data.data.logoUrl}</div>
+                        <div class="url-display">Banner URL: ${data.data.bannerUrl}</div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<div class="status error">❌ Settings API failed!</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<div class="status error">❌ API error: ' + error.message + '</div>';
+            }
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            setTimeout(testFetch, 1000);
+            setTimeout(testSettingsAPI, 1500);
+        });
+    </script>
+</body>
+</html>

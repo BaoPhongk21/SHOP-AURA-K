@@ -1,0 +1,36 @@
+# Dependencies are installed during the build
+node_modules/
+**/node_modules/
+
+# Runtime uploads must use persistent object storage in production
+server/src/uploads/*
+!server/src/uploads/.gitkeep
+
+# Local build output
+client/dist/
+dist/
+
+# Secrets and local Vercel metadata
+.env
+.env.*
+!.env.example
+!**/.env.example
+.vercel/
+**/.vercel/
+
+# Logs and development artifacts
+logs/
+**/logs/
+*.log
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+coverage/
+
+# Tests and one-off local utilities
+server/tests/
+*.test.js
+*.spec.js
+test-*.html
+replace-api.js
