@@ -47,14 +47,26 @@ app.use(helmet({
 
 // --- Middlewares ---
 // 1. CORS: Cực kỳ quan trọng để cho phép React (trên port khác) gọi API
+const normalizeOrigin = (value) => {
+  if (!value) return null;
+  try {
+    const url = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+};
+
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
   'https://shop-aura-k.vercel.app',
-  process.env.FRONTEND_URL
-].filter(Boolean); // Remove undefined values
+  process.env.FRONTEND_URL,
+  process.env.VERCEL_URL,
+  process.env.VERCEL_PROJECT_PRODUCTION_URL
+].map(normalizeOrigin).filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -67,13 +79,7 @@ app.use(cors({
       return callback(null, true);
     }
 
-    // Direct match
     if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    // Allow subpaths or hosts that start with allowed entry (helps when dev tools use hostnames)
-    if (allowedOrigins.some((o) => origin.startsWith(o))) {
       return callback(null, true);
     }
 
@@ -120,10 +126,13 @@ const io = new Server(server, {
       if (!origin) return callback(null, true);
       const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
       if (isLocalhost) return callback(null, true);
-      if (allowedOrigins.includes(origin) || allowedOrigins.some((o) => origin.startsWith(o))) {
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      return callback(null, true); // Permissive for dev
+      if (process.env.NODE_ENV === 'production' && process.env.ALLOW_UNKNOWN_ORIGINS !== '1') {
+        return callback(new Error('Not allowed by CORS'), false);
+      }
+      return callback(null, true);
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true

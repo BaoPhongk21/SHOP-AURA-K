@@ -1,7 +1,7 @@
 const { sequelize } = require('../config/database');
 const { sendEmailViaEmailJS } = require('../config/resend');
 
-const ADMIN_EMAIL = process.env.EMAIL_USER || 'admin@example.com'; // Email nhận thông báo liên hệ (Fallback nếu thiếu .env)
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || process.env.FROM_EMAIL || process.env.SMTP_USER;
 
 const submitContactForm = async (req, res) => {
     try {
