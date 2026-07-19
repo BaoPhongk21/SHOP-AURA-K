@@ -131,7 +131,7 @@ const getPublicVouchers = async (req, res) => {
         if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
             const token = req.headers.authorization.split(' ')[1];
             try {
-                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'my_super_secret_key');
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
                 userId = decoded.id;
             } catch (e) { 
                 console.log('Token verification failed:', e.message);
@@ -306,7 +306,7 @@ const validateCoupon = async (req, res) => {
         if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
             const token = req.headers.authorization.split(' ')[1];
             try {
-                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'my_super_secret_key');
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
                 userId = decoded.id;
             } catch (e) { }
         }

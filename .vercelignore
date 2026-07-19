@@ -10,13 +10,17 @@ server/src/uploads/*
 client/dist/
 dist/
 
-# Secrets and local Vercel metadata
+# Secrets, Git metadata, and local Vercel metadata
 .env
 .env.*
 !.env.example
 !**/.env.example
+.git/
+**/.git/
 .vercel/
 **/.vercel/
+.agents/
+skills-lock.json
 
 # Logs and development artifacts
 logs/
