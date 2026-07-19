@@ -2,7 +2,7 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') }
 const axios = require('axios');
 
 const BREVO_API_KEY = process.env.BREVO_SMTP_PASS;
-const FROM_EMAIL = process.env.FROM_EMAIL || 'levietbaophong111@gmail.com';
+const FROM_EMAIL = process.env.FROM_EMAIL;
 
 console.log('=== TEST BREVO REST API ===\n');
 
