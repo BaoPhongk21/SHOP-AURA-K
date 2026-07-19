@@ -40,16 +40,20 @@ const syncDatabaseSchema = async () => {
                 orders BOOLEAN DEFAULT false,
                 customers BOOLEAN DEFAULT false,
                 reports BOOLEAN DEFAULT false,
-                settings BOOLEAN DEFAULT false
+                settings BOOLEAN DEFAULT false,
+                vouchers BOOLEAN DEFAULT false,
+                inventory BOOLEAN DEFAULT false
             )
         `).catch(() => { });
+        await sequelize.query('ALTER TABLE role_permissions ADD COLUMN IF NOT EXISTS vouchers BOOLEAN DEFAULT false').catch(() => { });
+        await sequelize.query('ALTER TABLE role_permissions ADD COLUMN IF NOT EXISTS inventory BOOLEAN DEFAULT false').catch(() => { });
 
         const [[{ rolePermCount }]] = await sequelize.query('SELECT COUNT(*)::int AS "rolePermCount" FROM role_permissions').catch(() => [[{ rolePermCount: 0 }]]);
         if (!rolePermCount) {
             await sequelize.query(`
-                INSERT INTO role_permissions (role_name, products, orders, customers, reports, settings) VALUES
-                ('Admin', true, true, true, true, true),
-                ('Staff', false, true, true, false, false)
+                INSERT INTO role_permissions (role_name, products, orders, customers, reports, settings, vouchers, inventory) VALUES
+                ('Admin', true, true, true, true, true, true, true),
+                ('Staff', false, true, true, false, false, false, false)
             `).catch(() => { });
         }
 
@@ -148,6 +152,28 @@ const syncDatabaseSchema = async () => {
         `).catch(() => {});
 
         await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_banners_page_key ON banners(page_key)`).catch(() => {});
+
+        // Notifications
+        await sequelize.query(`
+            CREATE TABLE IF NOT EXISTS notifications (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                title VARCHAR(255) NOT NULL,
+                message TEXT NOT NULL,
+                type VARCHAR(50) DEFAULT 'system',
+                link VARCHAR(500),
+                is_read BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `).catch(() => {});
+        await sequelize.query(`
+            CREATE TABLE IF NOT EXISTS user_notification_reads (
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                notification_id INTEGER REFERENCES notifications(id) ON DELETE CASCADE,
+                read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, notification_id)
+            )
+        `).catch(() => {});
 
         logger.info('Đồng bộ Schema Cơ sở dữ liệu hoàn tất.');
     } catch (error) {

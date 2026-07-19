@@ -20,6 +20,7 @@ async function seedFull() {
         console.log('🗑️  Xóa dữ liệu cũ...');
 
         const tablesToClean = [
+            'user_notification_reads', 'notifications', 'role_permissions',
             'order_items', 'orders', 'cart_items', 'carts',
             'reviews', 'product_reviews', 'product_variants', 'product_images',
             'products', 'categories', 'sizes', 'colors', 'addresses',
@@ -324,13 +325,58 @@ async function seedFull() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        console.log('  ✅ Bảng contacts\n');
+        console.log('  ✅ Bảng contacts');
+
+        await sequelize.query(`
+            CREATE TABLE notifications (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                title VARCHAR(255) NOT NULL,
+                message TEXT NOT NULL,
+                type VARCHAR(50) DEFAULT 'system',
+                link VARCHAR(500),
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('  ✅ Bảng notifications');
+
+        await sequelize.query(`
+            CREATE TABLE user_notification_reads (
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                notification_id INTEGER REFERENCES notifications(id) ON DELETE CASCADE,
+                read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, notification_id)
+            )
+        `);
+        console.log('  ✅ Bảng user_notification_reads');
+
+        await sequelize.query(`
+            CREATE TABLE role_permissions (
+                role_name VARCHAR(50) PRIMARY KEY,
+                products BOOLEAN DEFAULT FALSE,
+                orders BOOLEAN DEFAULT FALSE,
+                customers BOOLEAN DEFAULT FALSE,
+                reports BOOLEAN DEFAULT FALSE,
+                settings BOOLEAN DEFAULT FALSE,
+                vouchers BOOLEAN DEFAULT FALSE,
+                inventory BOOLEAN DEFAULT FALSE
+            )
+        `);
+        await sequelize.query(`
+            INSERT INTO role_permissions (role_name, products, orders, customers, reports, settings, vouchers, inventory)
+            VALUES
+                ('Admin', TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE),
+                ('Staff', FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE)
+        `);
+        console.log('  ✅ Bảng role_permissions\n');
 
         // =============================================
         // BƯỚC 3: SEED USERS
         // =============================================
         console.log('👤 Tạo tài khoản...');
         const seedPassword = process.env.SEED_DEFAULT_PASSWORD;
+        const seedAdminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@shopquanao.com';
         if (!seedPassword) {
             throw new Error('SEED_DEFAULT_PASSWORD is required before seeding users');
         }
@@ -338,11 +384,11 @@ async function seedFull() {
         await sequelize.query(`
             INSERT INTO users (name, email, username, password, phone, role, rank, is_active, created_at, updated_at)
             VALUES 
-                ('Admin', 'admin@shopquanao.com', 'admin', '${hashedPassword}', '0123456789', 'admin', 'platinum', true, NOW(), NOW()),
+                ('Admin', :seedAdminEmail, 'admin', '${hashedPassword}', '0123456789', 'admin', 'platinum', true, NOW(), NOW()),
                 ('Khách hàng mẫu', 'customer@example.com', 'customer', '${hashedPassword}', '0987654321', 'customer', 'silver', true, NOW(), NOW()),
                 ('Nguyễn Văn An', 'nguyenvanan@gmail.com', 'vanan', '${hashedPassword}', '0912345678', 'customer', 'bronze', true, NOW(), NOW())
             ON CONFLICT (email) DO NOTHING
-        `);
+        `, { replacements: { seedAdminEmail } });
         console.log('✅ Đã tạo 3 users\n');
         console.log('  Tài khoản mẫu đã dùng mật khẩu từ SEED_DEFAULT_PASSWORD');
 
@@ -521,16 +567,21 @@ async function seedFull() {
         // =============================================
         console.log('⚙️  Tạo settings...');
         await sequelize.query(`
-            INSERT INTO settings (key, value, created_at, updated_at)
-            VALUES 
-                ('site_name', 'Aura K Shop', NOW(), NOW()),
-                ('site_description', 'Shop thời trang cao cấp - Phong cách là tất cả', NOW(), NOW()),
-                ('contact_email', 'contact@shopquanao.com', NOW(), NOW()),
-                ('contact_phone', '1900-xxxx', NOW(), NOW()),
-                ('hero_title', 'Thời Trang Đỉnh Cao', NOW(), NOW()),
-                ('hero_subtitle', 'Khám phá bộ sưu tập mới nhất từ các thương hiệu nổi tiếng', NOW(), NOW()),
-                ('newsletter_enabled', 'true', NOW(), NOW())
-            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+            INSERT INTO settings (
+                id, name, hotline, address, shipping_fee, map_url,
+                payment_vcb_active, payment_momo_active, payment_cod_active,
+                shipping_ghtk_active, shipping_ghn_active, primary_color, theme_mode,
+                created_at, updated_at
+            )
+            VALUES (
+                1, 'Aura K Shop', '1900-xxxx', '', 30000, '',
+                TRUE, TRUE, TRUE, TRUE, FALSE, '#003178', 'light', NOW(), NOW()
+            )
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                hotline = EXCLUDED.hotline,
+                shipping_fee = EXCLUDED.shipping_fee,
+                updated_at = NOW()
         `);
         console.log('✅ Đã tạo settings\n');
 
