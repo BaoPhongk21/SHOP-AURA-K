@@ -44,3 +44,6 @@ credentials*.json
 skills-lock.json
 *.swp
 *.swo
+
+.vercel
+.env*
