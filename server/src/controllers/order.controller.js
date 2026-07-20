@@ -1,4 +1,5 @@
 const { sequelize } = require('../config/database');
+const { safeEmit, safeEmitTo } = require('../utils/socketio.helper');
 const orderService = require('../services/order.service');
 const path = require('path');
 const { sendOrderConfirmationEmail, sendOrderStatusEmail } = require('../config/resend');
@@ -308,14 +309,11 @@ const updateOrderStatus = async (req, res) => {
 
         await t.commit();
 
-        // Phát sự kiện qua Socket.IO để Client tự động cập nhật
-        const io = req.app.get('socketio');
-        if (io) {
-            if (order.user_id) {
-                io.to(`user_${order.user_id}`).emit('order_updated', { orderId: id, status });
-            }
-            io.emit('admin_order_updated', { orderId: id, status });
+        // Realtime notifications (graceful no-op on serverless)
+        if (order.user_id) {
+            safeEmitTo(req, `user_${order.user_id}`, 'order_updated', { orderId: id, status });
         }
+        safeEmit(req, 'admin_order_updated', { orderId: id, status });
 
         // Gửi email thông báo trạng thái đơn hàng (chạy không đồng bộ, không block response)
         const customerEmail = order.email || order.user_email;
@@ -737,14 +735,11 @@ const createOrder = async (req, res) => {
             } catch (e) { console.error('Lỗi tạo thông báo', e); }
         }
 
-        // Phát sự kiện qua Socket.IO để Client tự động cập nhật
-        const io = req.app.get('socketio');
-        if (io) {
-            if (userId) {
-                io.to(`user_${userId}`).emit('order_updated', { orderId, status: 'pending' });
-            }
-            io.emit('new_order', { orderId });
+        // Realtime notifications (graceful no-op on serverless)
+        if (userId) {
+            safeEmitTo(req, `user_${userId}`, 'order_updated', { orderId, status: 'pending' });
         }
+        safeEmit(req, 'new_order', { orderId });
 
         res.status(201).json({ success: true, message: 'Đặt hàng thành công!', orderId });
     } catch (error) {
@@ -978,11 +973,7 @@ const markOrderDelivered = async (req, res) => {
 
         await t.commit();
 
-        // Phát sự kiện qua Socket.IO để Client Admin tự động cập nhật
-        const io = req.app.get('socketio');
-        if (io) {
-            io.emit('admin_order_updated', { orderId: id, status: 'completed' });
-        }
+        safeEmit(req, 'admin_order_updated', { orderId: id, status: 'completed' });
 
         res.status(200).json({ success: true, message: 'Xác nhận đã nhận hàng thành công' });
     } catch (error) {

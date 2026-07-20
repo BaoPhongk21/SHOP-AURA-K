@@ -1,4 +1,5 @@
 const { sequelize } = require('../config/database');
+const { safeEmit } = require('../utils/socketio.helper');
 const { sendEmailViaEmailJS } = require('../config/resend');
 const sharp = require('sharp');
 const fs = require('fs');
@@ -119,12 +120,8 @@ const updateAdminUser = async (req, res) => {
         // Fix: đảo thứ tự đúng: lastName (họ) + firstName (tên)
         const fullName = `${lastName || ''} ${firstName || ''}`.trim();
         await sequelize.query('UPDATE users SET name = ?, email = ?, role = ?, updated_at = NOW() WHERE id = ?', { replacements: [fullName, email, dbRole, id] });
-        
-        // Tự động load trang cho Client qua Socket.IO
-        const io = req.app.get('socketio');
-        if (io) {
-            io.emit('permissions_updated');
-        }
+
+        safeEmit(req, 'permissions_updated');
 
         res.status(200).json({ success: true, message: 'Cập nhật thông tin người dùng thành công!' });
     } catch (error) { res.status(500).json({ success: false, message: 'Lỗi server.' }); }
@@ -387,12 +384,8 @@ const updateRolePermissions = async (req, res) => {
                     { replacements: [perms.products || false, perms.orders || false, perms.customers || false, perms.reports || false, perms.settings || false, perms.vouchers || false, perms.inventory || false, role] });
             }
         }
-        
-        // Phát sự kiện qua Socket.IO để Client Staff tự động cập nhật
-        const io = req.app.get('socketio');
-        if (io) {
-            io.emit('permissions_updated');
-        }
+
+        safeEmit(req, 'permissions_updated');
 
         res.status(200).json({ success: true, message: 'Cập nhật phân quyền thành công!' });
     } catch (error) { res.status(500).json({ success: false, message: 'Lỗi server khi cập nhật.' }); }

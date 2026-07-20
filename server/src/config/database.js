@@ -14,6 +14,15 @@ const DB_NAME = process.env.DB_NAME || 'shop_quan_ao';
 const DB_USER = process.env.DB_USER || 'postgres';
 const DB_PASS = process.env.DB_PASS || 'password';
 
+// Cloud providers (Supabase, Neon, RDS, ...) luôn yêu cầu SSL trừ localhost.
+const isLocalHost = (host) =>
+  !host || ['localhost', '127.0.0.1'].includes(host) || host.endsWith('.local');
+
+const buildSslOptions = () => ({
+  require: true,
+  rejectUnauthorized: false,
+});
+
 if (DATABASE_URL && DATABASE_URL.trim()) {
   const dbUrl = String(DATABASE_URL).trim();
   const dialectOptions = {};
@@ -23,6 +32,7 @@ if (DATABASE_URL && DATABASE_URL.trim()) {
     dialectModule: pg,
     dialectOptions,
     logging: false,
+    pool: { max: 5, min: 0, acquire: 30000, idle: 10000 },
   };
 
   try {
@@ -31,11 +41,8 @@ if (DATABASE_URL && DATABASE_URL.trim()) {
     const database = parsedUrl.pathname ? parsedUrl.pathname.replace(/^\//, '') : undefined;
     const port = parsedUrl.port ? Number(parsedUrl.port) : 5432;
 
-    if (!['localhost', '127.0.0.1'].includes(parsedUrl.hostname)) {
-      dialectOptions.ssl = {
-        require: true,
-        rejectUnauthorized: false,
-      };
+    if (!isLocalHost(parsedUrl.hostname)) {
+      dialectOptions.ssl = buildSslOptions();
     }
 
     connectionOptions = {
@@ -47,29 +54,30 @@ if (DATABASE_URL && DATABASE_URL.trim()) {
       port,
     };
   } catch (err) {
-    console.warn('⚠️ Parse DATABASE_URL failed, using fallback config:', err.message);
-    // Nếu parse URL lỗi thì vẫn dùng raw DATABASE_URL như fallback.
+    console.warn('Parse DATABASE_URL failed, using fallback config:', err.message);
+    // Fallback: truyền raw URL cho Sequelize.
     connectionOptions = {
       ...connectionOptions,
       url: dbUrl,
+      dialectOptions: { ...connectionOptions.dialectOptions, ssl: buildSslOptions() },
     };
   }
 
   sequelize = new Sequelize(connectionOptions);
 } else {
-  // Fallback: Cấu hình dành cho Local hoặc khi DATABASE_URL không có
-  console.log('📝 Using fallback database configuration (individual env vars)');
-  
+  // Fallback: Cấu hình dành cho Local Postgres khi không có DATABASE_URL
+  console.log('Using fallback database configuration (individual env vars)');
+
   const dbPassword = DB_PASS !== 'password' ? String(DB_PASS) : undefined;
   const dbPort = DB_PORT ? Number(DB_PORT) : 5432;
 
-  // Tự động bật bảo mật SSL khi chạy trên Vercel/Production hoặc sử dụng CSDL Neon Cloud
   const dialectOptions = {};
-  if (process.env.NODE_ENV === 'production' || process.env.VERCEL === '1' || (DB_HOST && DB_HOST.includes('neon.tech'))) {
-    dialectOptions.ssl = {
-      require: true,
-      rejectUnauthorized: false,
-    };
+  if (
+    process.env.NODE_ENV === 'production' ||
+    process.env.VERCEL === '1' ||
+    !isLocalHost(DB_HOST)
+  ) {
+    dialectOptions.ssl = buildSslOptions();
   }
 
   sequelize = new Sequelize(
@@ -88,14 +96,41 @@ if (DATABASE_URL && DATABASE_URL.trim()) {
   );
 }
 
+let isDbInitialized = false;
+let initPromise = null;
+
 const connectDB = async () => {
+  if (isDbInitialized) return sequelize;
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
+    try {
+      await sequelize.authenticate();
+      isDbInitialized = true;
+      console.log('Database connection has been established successfully.');
+      return sequelize;
+    } catch (error) {
+      initPromise = null;
+      console.error('Database connection failed:', error.message);
+      throw error;
+    }
+  })();
+
+  return initPromise;
+};
+
+// Middleware đảm bảo DB đã kết nối trước khi xử lý request (chỉ dùng trên serverless).
+const ensureDbConnected = async (req, res, next) => {
   try {
-    await sequelize.authenticate();
-    console.log('✅ Kết nối Database PostgreSQL thành công!');
-  } catch (error) {
-    console.error('❌ Kết nối Database thất bại:', error.message);
-    process.exit(1);
+    await connectDB();
+    next();
+  } catch (err) {
+    res.status(503).json({
+      success: false,
+      message: 'Database unavailable',
+      error: process.env.NODE_ENV === 'production' ? undefined : err.message,
+    });
   }
 };
 
-module.exports = { sequelize, connectDB };
+module.exports = { sequelize, connectDB, ensureDbConnected, isDbInitialized: () => isDbInitialized };
