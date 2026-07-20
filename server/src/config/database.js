@@ -23,17 +23,9 @@ const buildSslOptions = () => ({
   rejectUnauthorized: false,
 });
 
-// Supabase serverless connection string (use pooler for serverless)
-const getSupabasePoolerUrl = (directUrl) => {
-  try {
-    const url = new URL(directUrl);
-    // Supabase pooler format: replace hostname with pooler and port with 6543
-    url.hostname = 'aws-0-ap-southeast-1.pooler.supabase.com';
-    url.port = '6543';
-    return url.toString();
-  } catch {
-    return directUrl;
-  }
+// Supabase serverless connection string (use direct connection for Supabase free tier)
+const getSupabaseUrl = (directUrl) => {
+  return directUrl; // Use direct connection
 };
 
 if (DATABASE_URL && DATABASE_URL.trim()) {
@@ -48,8 +40,8 @@ if (DATABASE_URL && DATABASE_URL.trim()) {
     pool: { max: 5, min: 0, acquire: 30000, idle: 10000 },
   };
 
-  // Sử dụng pooler URL cho Supabase (tốt hơn cho serverless)
-  const finalUrl = dbUrl.includes('supabase.co') ? getSupabasePoolerUrl(dbUrl) : dbUrl;
+  // Sử dụng URL cho Supabase
+  const finalUrl = getSupabaseUrl(dbUrl);
   console.log('Using database URL:', finalUrl.replace(/\/\/.*@/, '//***@'));
 
   try {

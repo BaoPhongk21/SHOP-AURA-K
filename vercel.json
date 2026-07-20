@@ -8,30 +8,34 @@
       "maxDuration": 30
     }
   },
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index.js"
+      "src": "^/api/(.*)$",
+      "dest": "/api/index.js"
     },
     {
-      "source": "/uploads/(.*)",
-      "destination": "/api/index.js"
+      "src": "/health",
+      "dest": "/api/index.js"
     },
     {
-      "source": "/static-assets/(.*)",
-      "destination": "/images/$1"
+      "src": "/uploads/(.*)",
+      "dest": "/api/index.js"
     },
     {
-      "source": "/client-images/(.*)",
-      "destination": "/images/$1"
+      "src": "/static-assets/(.*)",
+      "dest": "/images/$1"
     },
     {
-      "source": "/img/(.*)",
-      "destination": "/images/$1"
+      "src": "/client-images/(.*)",
+      "dest": "/images/$1"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/img/(.*)",
+      "dest": "/images/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
