@@ -1,31 +1,48 @@
-const server = require('../server/server');
+// Vercel Serverless Function Entry Point
+// This wraps the Express app for Vercel's serverless runtime
 
-// Vercel serverless handler
+process.env.VERCEL = '1';
+process.env.NODE_ENV = process.env.NODE_ENV || 'production';
+
+let app;
+let initError = null;
+
+try {
+  // Require the Express server
+  app = require('../server/server');
+  console.log('[Vercel API] Express app loaded successfully');
+} catch (err) {
+  console.error('[Vercel API] Failed to load Express app:', err);
+  initError = err;
+}
+
+// Wrap as serverless function
 module.exports = async (req, res) => {
-  try {
-    // Set CORS headers for all responses
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    
-    // Handle preflight
-    if (req.method === 'OPTIONS') {
-      return res.status(200).end();
-    }
-    
-    // Pass to Express app
-    server(req, res, (err) => {
-      if (err) {
-        console.error('Server error:', err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: 'Internal server error' });
-        }
-      }
+  if (initError) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server initialization failed',
+      error: initError.message,
     });
-  } catch (error) {
-    console.error('Unhandled error:', error);
+  }
+
+  if (!app) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server not available',
+    });
+  }
+
+  try {
+    return app(req, res);
+  } catch (err) {
+    console.error('[Vercel API] Request error:', err);
     if (!res.headersSent) {
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: err.message,
+      });
     }
   }
 };
