@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm run install:all",
-  "buildCommand": "npm run build:client",
+  "installCommand": "cd client && npm install --include=dev && cd ../server && npm install",
+  "buildCommand": "cd client && npx vite build",
   "outputDirectory": "client/dist",
   "functions": {
     "api/index.js": {
