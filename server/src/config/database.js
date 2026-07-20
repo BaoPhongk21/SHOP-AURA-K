@@ -23,6 +23,19 @@ const buildSslOptions = () => ({
   rejectUnauthorized: false,
 });
 
+// Supabase serverless connection string (use pooler for serverless)
+const getSupabasePoolerUrl = (directUrl) => {
+  try {
+    const url = new URL(directUrl);
+    // Supabase pooler format: replace hostname with pooler and port with 6543
+    url.hostname = 'aws-0-ap-southeast-1.pooler.supabase.com';
+    url.port = '6543';
+    return url.toString();
+  } catch {
+    return directUrl;
+  }
+};
+
 if (DATABASE_URL && DATABASE_URL.trim()) {
   const dbUrl = String(DATABASE_URL).trim();
   const dialectOptions = {};
@@ -35,8 +48,12 @@ if (DATABASE_URL && DATABASE_URL.trim()) {
     pool: { max: 5, min: 0, acquire: 30000, idle: 10000 },
   };
 
+  // Sử dụng pooler URL cho Supabase (tốt hơn cho serverless)
+  const finalUrl = dbUrl.includes('supabase.co') ? getSupabasePoolerUrl(dbUrl) : dbUrl;
+  console.log('Using database URL:', finalUrl.replace(/\/\/.*@/, '//***@'));
+
   try {
-    const parsedUrl = new URL(dbUrl);
+    const parsedUrl = new URL(finalUrl);
     const password = parsedUrl.password !== null ? String(parsedUrl.password) : undefined;
     const database = parsedUrl.pathname ? parsedUrl.pathname.replace(/^\//, '') : undefined;
     const port = parsedUrl.port ? Number(parsedUrl.port) : 5432;
@@ -55,10 +72,9 @@ if (DATABASE_URL && DATABASE_URL.trim()) {
     };
   } catch (err) {
     console.warn('Parse DATABASE_URL failed, using fallback config:', err.message);
-    // Fallback: truyền raw URL cho Sequelize.
     connectionOptions = {
       ...connectionOptions,
-      url: dbUrl,
+      url: finalUrl,
       dialectOptions: { ...connectionOptions.dialectOptions, ssl: buildSslOptions() },
     };
   }
