@@ -325,8 +325,9 @@ const getAllProducts = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Pagination Error:', error);
-        res.status(500).json({ success: false, message: 'Lỗi server khi lấy dữ liệu sản phẩm' });
+        console.error('Lỗi getAllProducts:', error.message || error);
+        console.error('Stack:', error.stack);
+        res.status(500).json({ success: false, message: 'Lỗi server khi lấy dữ liệu sản phẩm', error: error.message });
     }
 };
 
