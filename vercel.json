@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "cd client && npm install --include=dev && cd ../server && npm install",
-  "buildCommand": "cd client && npx vite build",
+  "buildCommand": "npm run vercel-build",
   "outputDirectory": "client/dist",
+  "installCommand": "npm run install:all",
   "functions": {
     "api/index.js": {
       "maxDuration": 30
