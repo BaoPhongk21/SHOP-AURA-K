@@ -23,9 +23,26 @@ const buildSslOptions = () => ({
   rejectUnauthorized: false,
 });
 
-// Supabase serverless connection string (use direct connection for Supabase free tier)
-const getSupabaseUrl = (directUrl) => {
-  return directUrl; // Use direct connection
+// Supabase serverless connection string (use pooler for serverless)
+const getSupabasePoolerUrl = (directUrl) => {
+  try {
+    const url = new URL(directUrl);
+    // Supabase pooler format: replace hostname and add project ref to username
+    // Direct: postgres://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres
+    // Pooler: postgres://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres?pgbouncer=true
+    const hostParts = url.hostname.split('.');
+    const projectRef = hostParts[1] || 'hpkmkfepjkeorauvfizd';
+    const password = url.password;
+    url.username = `postgres.${projectRef}`;
+    url.password = password;
+    url.hostname = `aws-0-ap-southeast-1.pooler.supabase.com`;
+    url.port = '6543';
+    url.searchParams.set('pgbouncer', 'true');
+    return url.toString();
+  } catch (err) {
+    console.error('Pooler URL transform error:', err);
+    return directUrl;
+  }
 };
 
 if (DATABASE_URL && DATABASE_URL.trim()) {
@@ -40,8 +57,8 @@ if (DATABASE_URL && DATABASE_URL.trim()) {
     pool: { max: 5, min: 0, acquire: 30000, idle: 10000 },
   };
 
-  // Sử dụng URL cho Supabase
-  const finalUrl = getSupabaseUrl(dbUrl);
+  // Sử dụng pooler URL cho Supabase (tốt hơn cho serverless)
+  const finalUrl = dbUrl.includes('supabase.co') ? getSupabasePoolerUrl(dbUrl) : dbUrl;
   console.log('Using database URL:', finalUrl.replace(/\/\/.*@/, '//***@'));
 
   try {
