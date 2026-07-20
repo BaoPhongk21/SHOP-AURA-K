@@ -2,6 +2,7 @@
   "buildCommand": "cd client && npx vite build && cd ../server && npm install",
   "installCommand": "npm run install:all",
   "framework": null,
+  "outputDirectory": "client/dist",
   "functions": {
     "api/index.js": {
       "maxDuration": 30,
